@@ -1,9 +1,12 @@
-<################################################################################
-# Force Full Sync Azure AD                                                     #
+################################################################################
+# Force sync to Azure AD                                                       #
 # Author: Cory Burditt                                                         #
-# Date: December 30, 2021                                                      #
-# Description: This script will force a full Sync to Azure AD                  #  
-################################################################################>
+# Version 1.5                                                                  #
+# Date: November 19, 2024                                                      #
+# Description: This script Forces a sync with Azure AD of any changes made     #
+#                 as well as adding in a function to update the                #
+#                 domain controllsers as well                                  #
+################################################################################
 
 
 
@@ -15,8 +18,16 @@ If (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
   exit
 }
 
+function Update-AllDomainController {
+  (Get-ADDomainController -Filter *).Name | Foreach-Object {repadmin /syncall $_ (Get-ADDomain).DistinguishedName /e /A | Out-Null}    
+  Start-Sleep 10    
+  Get-ADReplicationPartnerMetadata -Target "$env:userdnsdomain" -Scope Domain | Select-Object Server, LastReplicationSuccess
+
+}
+
 Import-Module ADSync
 Start-ADSyncSyncCycle -PolicyType Initial
+Update-AllDomainController
 
 #Completion notice and exit prompt.
 Write-Host ("Completed" )
